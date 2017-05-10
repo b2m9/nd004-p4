@@ -29,7 +29,6 @@ new books
 - JSON endpoints for all books `/JSON` and by topic `topic-slug/JSON`
     - No authentication for JSON endpoints required
 - Forms validation done by [WTForms](https://github.com/wtforms/wtforms/)
-- Forms are CSRF-proof by [Flask-WTF](https://github.com/lepture/flask-wtf)
 
 ## Setup Github OAuth
 
