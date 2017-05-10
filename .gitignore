@@ -1,6 +1,6 @@
 .idea/
 .vagrant/
-*.log/
+*.log
 *.db
 *.db-journal
 ENV/

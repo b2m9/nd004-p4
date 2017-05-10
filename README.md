@@ -1,2 +1,12 @@
-# nd004-p4
-📖 Udacity's fullstack project #4
+# Udacity: Bookshelf
+
+This repo is part of Udacity's nd004 course.
+
+An application to add, edit, and delete books by topics. User authentication
+provided by Github.
+
+## Kudos
+
+## What
+
+## How
