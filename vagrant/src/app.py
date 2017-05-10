@@ -99,10 +99,6 @@ def logout():
     return redirect(url_for("overview"))
 
 
-def get_github_user():
-    return str(github.get("user")["id"])
-
-
 @app.route("/github-callback")
 @github.authorized_handler
 def authorized(oauth_token):
