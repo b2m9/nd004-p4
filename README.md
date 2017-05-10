@@ -49,6 +49,7 @@ new books
     - [Vagrant will prefill the database with values](vagrant/Vagrantfile#L22)
 - `vagrant ssh` into the VM
 - `python3 /vagrant/src/app.py` to start Flask server
+- Open `localhost:5000` in your browser
 
 ## Database diagram
 
