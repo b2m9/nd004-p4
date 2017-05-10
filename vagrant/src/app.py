@@ -77,7 +77,7 @@ def logout():
 @github.authorized_handler
 def authorized(oauth_token):
     """Callback handler for Github OAuth.
-    
+
     Sets auth token to `session.auth_token` and redirects to route "/".
     """
     next_url = request.args.get("next") or url_for("overview")
@@ -99,16 +99,16 @@ def authorized(oauth_token):
 @app.route("/<topic_slug>/")
 def overview(topic_slug: str="") -> tuple:
     """Render `templates/overview.html` for "/" and "/<topic_slug>".
-    
+
     Route "/":
         Display all books ordered by `pub_date` from `bookshelf_db.Book`.
-    
+
     Route "/<topic_slug>":
         Display only the books associated with the given `topic_slug`.
-    
+
     Args:
         topic_slug: Unique human-friendly slug to identify topic.
-    
+
     Raises:
         SQLAlchemyError: Given `topic_slug` not found in `bookshelf_db.Topic`.
             Abort with error code 404.
@@ -158,7 +158,7 @@ def detail(topic_slug: str, book_slug: str) -> tuple:
 
     Route "/<topic_slug>/<book_slug>":
         Display all details associated with this book from `bookshelf_db.Book`.
-        Query for associated authors from `bookshelf_db.Author`. 
+        Query for associated authors from `bookshelf_db.Author`.
 
     Args:
         topic_slug: Unique human-friendly slug to identify topic.
@@ -226,12 +226,14 @@ def add_book():
             topic_exists = len(get_topic_by_name(topic)) > 0
 
             if not topic_exists:
-                db_session.add(Topic(name=topic, slug=create_topic_slug(topic)))
+                db_session.add(
+                    Topic(name=topic, slug=create_topic_slug(topic))
+                )
 
             topic_id = get_topic_by_name(topic)[0].id
             db_session.add(BookTopic(book_id=book_id, topic_id=topic_id))
 
-        # Add new `Author` if necessary and create new reference in `BookAuthor`
+        # Add new `Author` if necessary and create reference in `BookAuthor`
         for name in form.authors.data.split(","):
             name = name.strip()
             author_exists = len(get_author_by_name(name)) > 0
@@ -278,7 +280,8 @@ def update_topic(topic_slug: str) -> tuple:
     Raises:
         SQLAlchemyError: Given `topic_slug` not found in `bookshelf_db.Topic`.
             Abort with error code 404.
-        SQLAlchemyError: Commit updated topic failed. Abort with error code 500.
+        SQLAlchemyError: Commit updated topic failed. Abort with error code
+            500.
     """
     try:
         # Return 404 in case of invalid `topic_slug`
@@ -386,7 +389,8 @@ def update_book(topic_slug: str, book_slug: str) -> tuple:
                     db_session.add(Author(name=name))
 
                 author_id = get_author_by_name(name)[0].id
-                db_session.add(BookAuthor(book_id=book.id, author_id=author_id))
+                db_session.add(BookAuthor(book_id=book.id,
+                                          author_id=author_id))
 
             # Delete all authors without entries in `BookAuthor`
             delete_bookless_authors()
@@ -468,7 +472,7 @@ def delete_topic(topic_slug: str) -> tuple:
             delete_list(
                 db_session.query(BookAuthor)
                 .outerjoin(Book)
-                .filter(and_(Book.id == None))
+                .filter(and_(Book.id == None))  # `is None` does not work
                 .all()
             )
             delete_bookless_authors()
@@ -691,7 +695,7 @@ def delete_topicless_books() -> None:
 
 def delete_list(db_list: list) -> None:
     """Delete a list of SQLAlchemy objects.
-    
+
     Necessary because `session.delete` can only delete single elements.
     """
     for l in db_list:
