@@ -4,7 +4,9 @@ import sys
 from sqlalchemy.orm import sessionmaker
 from datetime import date
 from helper import get_slug
-from db_bookshelf import Topic, Book, Author, BookTopic, BookAuthor, engine
+from db_bookshelf import (
+    Topic, Book, Author, BookTopic, BookAuthor, User, engine
+)
 
 
 def prepopulate_db():
@@ -16,6 +18,10 @@ def prepopulate_db():
     """
     json_file = sys.path[0] + "/data/books.json"
     session = sessionmaker(bind=engine)()
+
+    session.add(User(github_id=1))
+    session.commit()
+    user_id = session.query(User).first().id
 
     with open(json_file, "r") as data_file:
         parsed_entries = json.load(data_file)
@@ -43,6 +49,7 @@ def prepopulate_db():
                              isbn=entry["isbn"],
                              description=entry["description"],
                              slug=book_slug,
+                             owner_id=user_id,
                              pub_date=date(int(pub_date[1]),
                                            int(pub_date[0]),
                                            1)))
@@ -74,6 +81,7 @@ def prepopulate_db():
                 if not topic_exists:
                     session.add(Topic(
                         name=topic,
+                        owner_id=user_id,
                         slug=get_slug(
                             [t.slug for t in (session.query(Topic).all())],
                             topic))

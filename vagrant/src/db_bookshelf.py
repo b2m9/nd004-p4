@@ -12,6 +12,13 @@ Base = declarative_base()
 engine = create_engine("sqlite:///" + sys.path[0] + "/{}.db".format(DB_NAME))
 
 
+class User(Base):
+    __tablename__ = "user"
+
+    id = Column(Integer, primary_key=True)
+    github_id = Column(Integer)
+
+
 """Basic classes for bookshelf: Topic, Author, Book.
 
 Note that those tables are not linked together, since they have a
@@ -31,6 +38,8 @@ class Topic(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(80), nullable=False)
     slug = Column(String(80), nullable=False)
+    owner_id = Column(Integer, ForeignKey("user.github_id"))
+    owner = relationship(User)
 
 
 class Author(Base):
@@ -49,6 +58,8 @@ class Book(Base):
     slug = Column(String(80), nullable=False)
     isbn = Column(String(13), nullable=False)
     description = Column(String(250))
+    owner_id = Column(Integer, ForeignKey("user.github_id"))
+    owner = relationship(User)
 
     def serialize(self):
         return {

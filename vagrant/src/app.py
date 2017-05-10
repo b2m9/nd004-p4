@@ -11,7 +11,9 @@ from datetime import date
 
 from forms import UpdateTopicForm, UpdateBookForm, DeleteForm, AddBookForm
 from helper import get_slug
-from db_bookshelf import Book, Topic, Author, BookAuthor, BookTopic, engine
+from db_bookshelf import (
+    User, Book, Topic, Author, BookAuthor, BookTopic, engine
+)
 from github_secrets import GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
 
 # Setup Flask app
@@ -30,17 +32,40 @@ db_session = sessionmaker(bind=engine)()
 @app.before_request
 def before_request():
     """Before each request, make auth token available in `g.user`."""
-    g.user = None
-    if 'auth_token' in session:
-        g.user = session['auth_token']
+    g.token = None
+    g.id = None
+    if "token" in session:
+        g.token = session["token"]
+    if "id" in session:
+        g.id = session["id"]
 
 
 @github.access_token_getter
 def token_getter():
     """Return Github's auth token to make requests on the user's behalf."""
-    user = g.user
-    if user is not None:
-        return user.auth_token
+    if g.token is not None:
+        return g.token
+
+
+@app.route('/login-success')
+@app.route('/login-success/')
+def login_successful():
+    """To actually get the Github user id, we need to make another request.
+    
+    This redirect is a little trick to enable `token_getter` to get the user's
+    Github id. All books and topics will be bound to the Github id as a owner.
+    """
+    gid = github.get("user")["id"]
+    user = db_session.query(User).filter_by(github_id=gid).first()
+
+    if user is None:
+        db_session.add(User(github_id=gid))
+        db_session.commit()
+
+    session["id"] = gid
+
+    flash("Login successful.", "success")
+    return redirect(url_for("overview"))
 
 
 @app.route("/login")
@@ -51,7 +76,7 @@ def login():
     """
     # Check if Github client secrets are set
     if app.config["GITHUB_CLIENT_ID"] and app.config["GITHUB_CLIENT_SECRET"]:
-        if session.get("auth_token", None) is None:
+        if session.get("token", None) is None:
             return github.authorize()
         else:
             flash("Already logged in.", "info")
@@ -68,9 +93,14 @@ def logout():
     """Remove auth token and redirect to route "/". Does not test if a user
     was actually logged in.
     """
-    session.pop("auth_token", None)
+    session.pop("token", None)
+    session.pop("id", None)
     flash("Logout successful.", "success")
     return redirect(url_for("overview"))
+
+
+def get_github_user():
+    return str(github.get("user")["id"])
 
 
 @app.route("/github-callback")
@@ -86,9 +116,8 @@ def authorized(oauth_token):
         flash("Authorization failed.", "danger")
         return redirect(next_url)
 
-    session["auth_token"] = oauth_token
-    flash("Login successful.", "success")
-    return redirect(next_url)
+    session["token"] = oauth_token
+    return redirect(url_for("login_successful"))
 
 
 """" SECTION: READ TOPICS AND BOOKS """
@@ -145,10 +174,8 @@ def overview(topic_slug: str="") -> tuple:
             .all()
         )
 
-    user = None if not g.user else g.user
-
     return render_template("overview.html", topics=topic_list, topic=topic,
-                           t_slug=topic_slug, books=book_list, user=user)
+                           t_slug=topic_slug, books=book_list, user=g.token)
 
 
 @app.route("/<topic_slug>/<book_slug>")
@@ -177,10 +204,8 @@ def detail(topic_slug: str, book_slug: str) -> tuple:
     except SQLAlchemyError as sa_err:
         return abort(404, sa_err)
 
-    user = None if not g.user else g.user
-
     return render_template("detail.html", book=book, authors=authors,
-                           t_slug=topic_slug, b_slug=book_slug, user=user)
+                           t_slug=topic_slug, b_slug=book_slug, user=g.token)
 
 
 """" SECTION: ADD BOOKS """
@@ -203,8 +228,7 @@ def add_book():
         SQLAlchemyError: Commit new book failed. Abort with error code 500.
     """
     # User needs to be logged in to see this page
-    user = None if not g.user else g.user
-    if user is None:
+    if g.token is None:
         return abort(401)
 
     form = AddBookForm()
@@ -216,6 +240,7 @@ def add_book():
                     isbn=form.isbn.data,
                     description=form.description.data,
                     slug=create_book_slug(form.title.data),
+                    owner_id=g.id,
                     pub_date=date(int(pub_date[1]), int(pub_date[0]), 1))
         db_session.add(book)
         book_id = db_session.query(Book).filter_by(slug=book.slug).one().id
@@ -227,7 +252,8 @@ def add_book():
 
             if not topic_exists:
                 db_session.add(
-                    Topic(name=topic, slug=create_topic_slug(topic))
+                    Topic(name=topic, owner_id=g.id,
+                          slug=create_topic_slug(topic))
                 )
 
             topic_id = get_topic_by_name(topic)[0].id
@@ -255,7 +281,7 @@ def add_book():
         flash("Book successfully added.", "success")
         return redirect(url_for("overview"))
     else:
-        return render_template("add.html", form=form, user=user)
+        return render_template("add.html", form=form, user=g.token)
 
 
 """" SECTION: EDIT TOPICS AND BOOKS """
@@ -290,9 +316,12 @@ def update_topic(topic_slug: str) -> tuple:
         return abort(404, sa_err)
 
     # User needs to be logged in to see this page
-    user = None if not g.user else g.user
-    if user is None:
+    if g.token is None:
         return abort(401)
+
+    # User needs to be the owner to see this page
+    if topic.owner_id != g.id:
+        return abort(403)
 
     form = UpdateTopicForm()
 
@@ -320,7 +349,7 @@ def update_topic(topic_slug: str) -> tuple:
             form.name.data = topic.name
 
         return render_template("update.html", form=form, name=topic.name,
-                               user=user)
+                               user=g.token)
 
 
 @app.route("/<topic_slug>/<book_slug>/edit", methods=["GET", "POST"])
@@ -356,9 +385,12 @@ def update_book(topic_slug: str, book_slug: str) -> tuple:
         return abort(404, sa_err)
 
     # User needs to be logged in to see this page
-    user = None if not g.user else g.user
-    if user is None:
+    if g.token is None:
         return abort(401)
+
+    # User needs to be the owner to see this page
+    if book.owner_id != g.id:
+        return abort(403)
 
     form = UpdateBookForm()
 
@@ -413,7 +445,7 @@ def update_book(topic_slug: str, book_slug: str) -> tuple:
             form.pub_date.data = book.pub_date.strftime("%m-%Y")
 
         return render_template("update.html", form=form, name=book.title,
-                               user=user)
+                               user=g.token)
 
 
 """" SECTION: DELETE TOPICS AND BOOKS """
@@ -449,9 +481,12 @@ def delete_topic(topic_slug: str) -> tuple:
         return abort(404, sa_err)
 
     # User needs to be logged in to see this page
-    user = None if not g.user else g.user
-    if user is None:
+    if g.token is None:
         return abort(401)
+
+    # User needs to be the owner to see this page
+    if topic.owner_id != g.id:
+        return abort(403)
 
     form = DeleteForm()
 
@@ -487,7 +522,7 @@ def delete_topic(topic_slug: str) -> tuple:
         return redirect(url_for("overview"))
     else:
         return render_template("delete.html", form=form, name=topic.name,
-                               is_topic=True, user=user)
+                               is_topic=True, user=g.token)
 
 
 @app.route("/<topic_slug>/<book_slug>/delete", methods=["GET", "POST"])
@@ -523,9 +558,12 @@ def delete_book(topic_slug: str, book_slug: str) -> tuple:
         return abort(404, sa_err)
 
     # User needs to be logged in to see this page
-    user = None if not g.user else g.user
-    if user is None:
+    if g.token is None:
         return abort(401)
+
+    # User needs to be the owner to see this page
+    if book.owner_id != g.id:
+        return abort(403)
 
     form = DeleteForm()
 
@@ -555,7 +593,7 @@ def delete_book(topic_slug: str, book_slug: str) -> tuple:
         return redirect(url_for("overview"))
     else:
         return render_template("delete.html", form=form, name=book.title,
-                               is_book=True, user=user)
+                               is_book=True, user=g.token)
 
 
 """" SECTION: JSON ENDPOINTS """
@@ -590,25 +628,25 @@ def handle_json(topic_slug: str=""):
 @app.errorhandler(401)
 def error_404(e: Exception) -> tuple:
     """Render `templates/401.html` if 401 error."""
-    user = None if not g.user else g.user
+    return render_template("401.html", exception=e, user=g.token), 401
 
-    return render_template("401.html", exception=e, user=user), 401
+
+@app.errorhandler(403)
+def error_404(e: Exception) -> tuple:
+    """Render `templates/403.html` if 401 error."""
+    return render_template("403.html", exception=e, user=g.token), 401
 
 
 @app.errorhandler(404)
 def error_404(e: Exception) -> tuple:
     """Render `templates/404.html` if 404 error."""
-    user = None if not g.user else g.user
-
-    return render_template("404.html", exception=e, user=user), 404
+    return render_template("404.html", exception=e, user=g.token), 404
 
 
 @app.errorhandler(500)
 def error_500(e: Exception) -> tuple:
     """Render `templates/500.html` if 500 error."""
-    user = None if not g.user else g.user
-
-    return render_template('500.html', exception=e, user=user), 500
+    return render_template('500.html', exception=e, user=g.token), 500
 
 
 """" SECTION: HELPER FUNCTIONS TO RE-USE QUERIES """

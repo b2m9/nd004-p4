@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Bookshelf - 403{% endblock %}
+
+{% block page_content %}
+    <h1>403 - Not Authorised</h1><br>
+    <a href="{{ url_for("overview") }}">No permission. Back to all books.</a>
+    {% if exception %}
+        <br><br>
+        <p>{{ exception }}</p>
+    {% endif %}
+{% endblock %}
