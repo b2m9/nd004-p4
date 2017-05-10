@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Bookshelf - 401{% endblock %}
+
+{% block page_content %}
+    <h1>401 - Not Authenticated</h1><br>
+    <a href="{{ url_for("login") }}">Click here to login.</a>
+    {% if exception %}
+        <br><br>
+        <p>{{ exception }}</p>
+    {% endif %}
+{% endblock %}

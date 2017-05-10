@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+
+{% block title %}
+    Bookshelf{% if topic %} - {{ topic }}{% endif %}
+{% endblock %}
+
+{% block page_content %}
+    <div class="row">
+      <div class="col-md-4">
+          <h1>Topics</h1>
+          {{ macros.list_topics(topics) }}
+      </div>
+      <div class="col-md-8">
+          <h1>
+              {% if topic %}{{ topic }}
+              {% else %}Latest Books
+              {% endif %}
+          </h1>
+              {% if topic %}{{ macros.list_books(books, False) }}
+              {% else %}{{ macros.list_books(books, True) }}
+              {% endif %}
+
+              {% if topic and user %}
+              <br><br>
+              <div class="panel panel-danger">
+                  <div class="panel-heading">
+                    <h3 class="panel-title">Admin Panel</h3>
+                  </div>
+                  <div class="panel-body">
+                      <a class="btn btn-default" role="button"
+                         href="{{ url_for("update_topic",
+                         topic_slug=t_slug) }}">Edit {{ topic }}</a>
+                      <a class="btn btn-default" role="button"
+                         href="{{ url_for("delete_topic",
+                         topic_slug=t_slug) }}">Delete {{ topic }}</a>
+                  </div>
+              </div>
+              {% endif %}
+      </div>
+    </div>
+{% endblock %}

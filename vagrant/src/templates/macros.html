@@ -1,0 +1,23 @@
+{% macro list_topics(topics) %}
+    <ul>
+    {% for topic in topics %}
+        <li>
+            <a href="{{ url_for("overview", topic_slug=topic.slug) }}">
+                {{ topic.name }}
+            </a>
+        </li>
+    {% endfor %}
+    </ul>
+{% endmacro %}
+
+{% macro list_books(books, add_topic) %}
+    <ul>
+    {% for book in books %}
+        <li>
+            <a href="{% if add_topic %}{{ book[2] }}/{% endif %}{{ book[1] }}">
+                {{ book.title }}
+            </a>
+        </li>
+    {% endfor %}
+    </ul>
+{% endmacro %}

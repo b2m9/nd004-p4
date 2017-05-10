@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}Bookshelf - Delete {{ name }}{% endblock %}
+
+{% block page_content %}
+    <h1>Delete {{ name }}</h1>
+    <div class="row">
+        <div class="col-md-12">
+            {% if is_topic %}
+                <div class="alert alert-danger" role="alert">
+                    Deleting an entire topic will also delete all books that are
+                    associated only with this particular topic!
+                </div>
+            {% endif %}
+
+            {% if is_book %}
+                <div class="alert alert-danger" role="alert">
+                    Deleting an entire book will also delete all authors who are
+                    associated only with this particular book!
+                </div>
+            {% endif %}
+
+            {{ wtf.quick_form(form) }}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% import "macros.html" as macros %}
+
+{% block title %}Bookshelf - {{ book.title }}{% endblock %}
+
+{% block page_content %}
+    <h1>{{ book.title }}</h1>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+        <h3 class="panel-title">Author(s)</h3>
+        </div>
+        <div class="panel-body">
+        {{ ", ".join(authors) }}
+        </div>
+
+        <div class="panel-heading">
+        <h3 class="panel-title">Publication Date</h3>
+        </div>
+        <div class="panel-body">
+        {{ book.pub_date.strftime("%B %Y") }}
+        </div>
+
+        <div class="panel-heading">
+        <h3 class="panel-title">Description</h3>
+        </div>
+        <div class="panel-body">
+        {{ book.description }}
+        </div>
+    </div>
+    {% if user %}
+        <br><br>
+        <div class="panel panel-danger">
+            <div class="panel-heading">
+                <h3 class="panel-title">Admin Panel</h3>
+            </div>
+            <div class="panel-body">
+                <a class="btn btn-default" role="button"
+                   href="{{ url_for("update_book",
+                   topic_slug=t_slug, book_slug=b_slug) }}">
+                    Edit {{ book.title }}
+                </a>
+                <a class="btn btn-default" role="button"
+                   href="{{ url_for("delete_book",
+                   topic_slug=t_slug, book_slug=b_slug) }}">
+                    Delete {{ book.title }}
+                </a>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

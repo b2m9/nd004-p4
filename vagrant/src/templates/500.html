@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Bookshelf - 500{% endblock %}
+
+{% block page_content %}
+    <h1>500 - Internal Server Error</h1><br>
+    <a href="{{ url_for("overview") }}">Back to all topics.</a>
+    {% if exception %}
+        <br><br>
+        <p>{{ exception }}</p>
+    {% endif %}
+{% endblock %}
