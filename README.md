@@ -29,7 +29,6 @@ new books
 - JSON endpoints for all books `/JSON` and by topic `topic-slug/JSON`
     - No authentication for JSON endpoints required
 - Forms validation done by [WTForms](https://github.com/wtforms/wtforms/)
-- Forms are CSRF-proof by [Flask-WTF](https://github.com/lepture/flask-wtf)
 
 ## Setup Github OAuth
 
@@ -49,6 +48,7 @@ new books
     - [Vagrant will prefill the database with values](vagrant/Vagrantfile#L22)
 - `vagrant ssh` into the VM
 - `python3 /vagrant/src/app.py` to start Flask server
+- Open `localhost:5000` in your browser
 
 ## Database diagram
 
