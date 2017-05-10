@@ -6,3 +6,4 @@
 ENV/
 venv/
 env/
+github_secrets.py
